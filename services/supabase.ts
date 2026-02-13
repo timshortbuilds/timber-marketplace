@@ -183,7 +183,7 @@ export const sendMessage = async (listingId: string, senderId: string, receiverI
 
 // --- AUTH & USER ---
 
-export const updateUserRole = async (role: 'hunter' | 'landowner') => {
+export const updateUserRole = async (role: 'hunter' | 'landowner' | 'admin') => {
   if (!isSupabaseConnected) return { data: null, error: null };
   
   // 1. Update Auth Metadata (for session)

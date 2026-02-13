@@ -1,0 +1,7 @@
+{
+  "name": "Timber Marketplace",
+  "description": "A premium marketplace for private land hunting leases, connecting landowners with hunters.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

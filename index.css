@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-stone-50 text-stone-900 overflow-x-hidden;
+}
+
+/* Leaflet Map Styling */
+.leaflet-container {
+  font-family: 'Inter', sans-serif;
+}
+
+.custom-div-icon {
+  background: none;
+  border: none;
+}
+
+.price-marker {
+  @apply bg-emerald-900 text-white text-[11px] font-bold px-2 py-1 rounded-full shadow-lg border-2 border-white whitespace-nowrap transform -translate-x-1/2 -translate-y-full hover:bg-stone-900 transition-colors;
+}
+
+/* Animations */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out forwards;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #d1d5db;
+}

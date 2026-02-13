@@ -4,7 +4,8 @@ import { User } from '../types';
 
 interface HeaderProps {
   user: User | null;
-  onAuthClick: () => void;
+  onLoginClick: () => void;
+  onSignupClick: () => void;
   onLogout: () => void;
   onMessagesClick: () => void;
   onDashboardClick?: () => void;
@@ -13,7 +14,8 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ 
   user, 
-  onAuthClick, 
+  onLoginClick,
+  onSignupClick,
   onLogout, 
   onMessagesClick, 
   onDashboardClick,
@@ -84,8 +86,8 @@ const Header: React.FC<HeaderProps> = ({
             </div>
           ) : (
             <>
-              <button onClick={onAuthClick} className="hidden sm:block text-sm font-medium text-stone-600 hover:text-stone-900">Login</button>
-              <button onClick={onAuthClick} className="bg-emerald-900 text-white px-6 py-2 rounded-full text-sm font-bold hover:bg-stone-900 transition-all shadow-lg active:scale-95">
+              <button onClick={onLoginClick} className="hidden sm:block text-sm font-medium text-stone-600 hover:text-stone-900">Login</button>
+              <button onClick={onSignupClick} className="bg-emerald-900 text-white px-6 py-2 rounded-full text-sm font-bold hover:bg-stone-900 transition-all shadow-lg active:scale-95">
                 Join Timber
               </button>
             </>

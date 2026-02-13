@@ -1,17 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User } from '../types';
 import { supabase, signInWithGoogle, isSupabaseConnected } from '../services/supabase';
 
 interface AuthModalProps {
+  view: 'login' | 'signup';
   onClose: () => void;
   onMockLogin: (user: User) => void;
+  onSwitchView: (view: 'login' | 'signup') => void;
 }
 
-const AuthModal: React.FC<AuthModalProps> = ({ onClose, onMockLogin }) => {
+const AuthModal: React.FC<AuthModalProps> = ({ view, onClose, onMockLogin, onSwitchView }) => {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorDetails, setErrorDetails] = useState<{message: string, isRateLimit: boolean} | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  
+  // Signup Flow State
+  const [signupStep, setSignupStep] = useState<'role' | 'email'>('role');
+  const [selectedRole, setSelectedRole] = useState<'hunter' | 'landowner' | null>(null);
+
+  useEffect(() => {
+    setSignupStep('role');
+    setPassword('');
+    setSelectedRole(null);
+    setErrorDetails(null);
+    setSuccessMessage(null);
+  }, [view]);
 
   const handleGoogleLogin = async () => {
     if (!isSupabaseConnected) {
@@ -41,7 +56,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onMockLogin }) => {
     });
   };
 
-  const handleMagicLink = async (e: React.FormEvent) => {
+  const handleEmailPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorDetails(null);
     setSuccessMessage(null);
@@ -54,37 +69,51 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onMockLogin }) => {
           id: 'mock-email-user-' + Math.random().toString(36).substr(2, 5),
           name: email.split('@')[0],
           email: email,
-          role: null
+          role: view === 'signup' ? selectedRole : null
         });
       }, 800);
       return;
     }
     
     try {
-      const { error } = await supabase!.auth.signInWithOtp({ 
-        email,
-        options: {
-          emailRedirectTo: window.location.origin
-        }
-      });
-      setIsLoading(false);
-      
-      if (error) {
-        const isRateLimit = error.message.toLowerCase().includes('rate limit');
-        setErrorDetails({ 
-          message: isRateLimit 
-            ? "Supabase email rate limit exceeded. This usually happens on free plans after multiple attempts." 
-            : error.message, 
-          isRateLimit 
+      if (view === 'signup') {
+        const { data, error } = await supabase!.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { role: selectedRole }
+          }
         });
+        
+        if (error) throw error;
+
+        // If "Confirm Email" is ON in Supabase, session will be null
+        if (data.user && !data.session) {
+          setSuccessMessage('Account created! Please check your email to confirm.');
+        } else {
+          onClose(); // Auto-login successful
+        }
       } else {
-        setSuccessMessage('Check your email for the login link!');
+        // Login
+        const { error } = await supabase!.auth.signInWithPassword({
+          email,
+          password
+        });
+        
+        if (error) throw error;
+        
+        // If successful, App.tsx detects session change, but we close modal explicitly
+        onClose();
       }
     } catch (err: any) {
       setIsLoading(false);
-      setErrorDetails({ message: "An unexpected error occurred.", isRateLimit: false });
+      setErrorDetails({ message: err.message || "An unexpected error occurred.", isRateLimit: false });
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  const showRoleSelection = view === 'signup' && signupStep === 'role';
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
@@ -95,8 +124,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onMockLogin }) => {
         </button>
 
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-stone-900 mb-2 font-serif">Welcome to Timber</h2>
-          <p className="text-stone-500 text-sm">Access private hunting land and expert landowners.</p>
+          <h2 className="text-3xl font-bold text-stone-900 mb-2 font-serif">{view === 'signup' ? 'Join Timber' : 'Welcome Back'}</h2>
+          <p className="text-stone-500 text-sm">{view === 'signup' ? 'Create an account to get started.' : 'Access private hunting land and expert landowners.'}</p>
         </div>
 
         {errorDetails?.isRateLimit && (
@@ -136,47 +165,100 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose, onMockLogin }) => {
         </button> 
         */}
 
-        <div className="relative mb-6">
-          {/* <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-stone-200"></div></div> */}
-          <div className="relative flex justify-center text-[10px] uppercase tracking-widest"><span className="bg-white px-2 text-stone-400 font-black">Or use email</span></div>
-        </div>
-        
-        <form onSubmit={handleMagicLink} className="space-y-4">
-          <div className="relative">
-            <input 
-              required 
-              type="email" 
-              className={`w-full bg-stone-50 border ${errorDetails ? 'border-rose-300' : 'border-stone-200'} rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-800 transition-all`} 
-              placeholder="Email address" 
-              value={email} 
-              onChange={e => setEmail(e.target.value)} 
-            />
+        {showRoleSelection ? (
+          <div className="space-y-4">
+            <p className="text-center text-sm font-bold text-stone-700 mb-4">I am a...</p>
+            <div className="grid grid-cols-2 gap-4">
+              <button 
+                onClick={() => setSelectedRole('hunter')}
+                className={`p-4 rounded-xl border-2 text-left transition-all ${selectedRole === 'hunter' ? 'border-emerald-600 bg-emerald-50 ring-2 ring-emerald-600/20' : 'border-stone-200 hover:border-emerald-200 hover:bg-stone-50'}`}
+              >
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-3 transition-colors ${selectedRole === 'hunter' ? 'bg-emerald-200 text-emerald-800' : 'bg-stone-100 text-stone-500'}`}>
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                </div>
+                <div className="font-bold text-stone-900 text-sm">Hunter</div>
+              </button>
+              <button 
+                onClick={() => setSelectedRole('landowner')}
+                className={`p-4 rounded-xl border-2 text-left transition-all ${selectedRole === 'landowner' ? 'border-emerald-600 bg-emerald-50 ring-2 ring-emerald-600/20' : 'border-stone-200 hover:border-emerald-200 hover:bg-stone-50'}`}
+              >
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-3 transition-colors ${selectedRole === 'landowner' ? 'bg-emerald-200 text-emerald-800' : 'bg-stone-100 text-stone-500'}`}>
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+                </div>
+                <div className="font-bold text-stone-900 text-sm">Landowner</div>
+              </button>
+            </div>
+            <button 
+              onClick={() => setSignupStep('email')}
+              disabled={!selectedRole}
+              className="w-full mt-4 bg-emerald-900 text-white py-4 rounded-xl font-bold hover:bg-stone-900 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Continue
+            </button>
           </div>
-
-          {successMessage && (
-            <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl text-xs font-bold text-emerald-800 animate-fade-in">
-              {successMessage}
+        ) : (
+          <form onSubmit={handleEmailPassword} className="space-y-4">
+            {view === 'signup' && (
+              <button 
+                type="button" 
+                onClick={() => setSignupStep('role')}
+                className="text-xs text-stone-400 hover:text-stone-600 flex items-center gap-1 mb-2"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                Back to role selection
+              </button>
+            )}
+            
+            <div className="relative">
+              <input 
+                required 
+                type="email" 
+                className={`w-full bg-stone-50 border ${errorDetails ? 'border-rose-300' : 'border-stone-200'} rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-800 transition-all`} 
+                placeholder="Email address" 
+                value={email} 
+                onChange={e => setEmail(e.target.value)} 
+              />
             </div>
-          )}
-
-          {errorDetails && !errorDetails.isRateLimit && (
-            <div className="p-4 bg-rose-50 border border-rose-100 rounded-xl text-xs font-bold text-rose-800 animate-fade-in">
-              {errorDetails.message}
+            
+            <div className="relative">
+              <input 
+                required 
+                type="password" 
+                className={`w-full bg-stone-50 border ${errorDetails ? 'border-rose-300' : 'border-stone-200'} rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-emerald-800 transition-all`} 
+                placeholder="Password" 
+                value={password} 
+                onChange={e => setPassword(e.target.value)} 
+              />
             </div>
-          )}
 
-          <button 
-            type="submit" 
-            disabled={isLoading} 
-            className="w-full bg-emerald-900 text-white py-4 rounded-xl font-bold hover:bg-stone-900 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50"
-          >
-            {isLoading ? 'Processing...' : (isSupabaseConnected ? 'Get Magic Link' : 'Simulate Magic Link')}
+            {successMessage && (
+              <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl text-xs font-bold text-emerald-800 animate-fade-in">
+                {successMessage}
+              </div>
+            )}
+
+            {errorDetails && !errorDetails.isRateLimit && (
+              <div className="p-4 bg-rose-50 border border-rose-100 rounded-xl text-xs font-bold text-rose-800 animate-fade-in">
+                {errorDetails.message}
+              </div>
+            )}
+
+            <button 
+              type="submit" 
+              disabled={isLoading} 
+              className="w-full bg-emerald-900 text-white py-4 rounded-xl font-bold hover:bg-stone-900 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50"
+            >
+              {isLoading ? 'Processing...' : (view === 'signup' ? 'Create Account' : 'Log In')}
+            </button>
+          </form>
+        )}
+
+        <div className="mt-8 text-center text-xs font-medium text-stone-500">
+          {view === 'login' ? "Don't have an account? " : "Already have an account? "}
+          <button onClick={() => onSwitchView(view === 'login' ? 'signup' : 'login')} className="text-emerald-800 font-bold hover:underline">
+            {view === 'login' ? 'Join Timber' : 'Log in'}
           </button>
-        </form>
-
-        <p className="mt-8 text-center text-[10px] text-stone-400 font-medium">
-          By continuing, you agree to Timber's Terms of Service and Privacy Policy.
-        </p>
+        </div>
       </div>
     </div>
   );

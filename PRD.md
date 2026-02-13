@@ -49,14 +49,18 @@ Create a trusted, premium marketplace that makes private land hunting accessible
 ### 1. User Authentication & Onboarding
 
 #### Authentication
-- Email-based authentication via Supabase Auth
+- Email & Password authentication via Supabase Auth
 - OAuth integration (Google)
 - Simulation mode for development/demo purposes
 
-#### Onboarding Flow
-- **Role Selection**: Users choose between "Landowner" or "Hunter" roles
-- **Profile Creation**: Name, email, avatar captured
-- **Role-Specific Dashboard**: Users directed to appropriate dashboard post-onboarding
+#### Signup Flow
+1. **Role Selection**: User clicks "Join", prompted to select "Hunter" or "Landowner".
+2. **Credentials**: User enters email and creates a password.
+3. **Account Creation**: Account created with selected role attached automatically.
+
+#### Login Flow
+- Email and Password entry.
+- No role selection required (already exists).
 
 **Success Criteria**:
 - New users can sign up and select a role in < 2 minutes

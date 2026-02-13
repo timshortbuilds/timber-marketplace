@@ -28,7 +28,7 @@ const TimberApp: React.FC = () => {
   const [savedIds, setSavedIds] = useState<string[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authView, setAuthView] = useState<'login' | 'signup' | null>(null);
   const [isAddLandModalOpen, setIsAddLandModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
@@ -274,7 +274,8 @@ const TimberApp: React.FC = () => {
     <div className="min-h-screen bg-stone-50 text-stone-900 font-sans flex flex-col relative">
       <Header 
         user={user} 
-        onAuthClick={() => setIsAuthModalOpen(true)} 
+        onLoginClick={() => setAuthView('login')}
+        onSignupClick={() => setAuthView('signup')}
         onLogout={handleLogout}
         onMessagesClick={() => navigate('/messages')}
         onDashboardClick={() => navigate('/dashboard')}
@@ -391,13 +392,15 @@ const TimberApp: React.FC = () => {
         </div>
       </div>
 
-      {isAuthModalOpen && (
+      {authView && (
         <AuthModal 
-          onClose={() => setIsAuthModalOpen(false)} 
+          view={authView}
+          onClose={() => setAuthView(null)} 
+          onSwitchView={(view) => setAuthView(view)}
           onMockLogin={(u) => {
             setUser(u);
             saveSimulatedUser(u);
-            setIsAuthModalOpen(false);
+            setAuthView(null);
           }} 
         />
       )}
@@ -412,7 +415,7 @@ const TimberApp: React.FC = () => {
           onClose={() => navigate('/')} 
           user={user}
           onUpgrade={() => setIsPaymentModalOpen(true)}
-          onAuth={() => setIsAuthModalOpen(true)}
+          onAuth={() => setAuthView('signup')}
           onInquire={() => navigate('/messages')}
         />
       )}
